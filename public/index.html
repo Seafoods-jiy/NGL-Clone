@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ngl</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="page-index">
+  <div class="index-container">
+    <a href="#" class="index-back">‹</a>
+    <h1 class="index-title">Choose a username</h1>
+    <input
+      id="usernameInput"
+      type="text"
+      class="index-input"
+      placeholder="@"
+      autocomplete="off"
+      maxlength="30"
+    />
+    <button id="continueBtn" class="index-continue-btn" onclick="goNext()">Continue</button>
+  </div>
+
+  <script>
+    const input = document.getElementById('usernameInput');
+    const btn = document.getElementById('continueBtn');
+
+    input.addEventListener('input', () => {
+      btn.classList.toggle('ready', input.value.trim().length > 0);
+    });
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') goNext();
+    });
+
+    function goNext() {
+      const username = input.value.trim();
+      if (!username) {
+        input.classList.add('shake');
+        setTimeout(() => input.classList.remove('shake'), 400);
+        return;
+      }
+      sessionStorage.setItem('sender_username', username);
+      window.location.href = 'send.html';
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+{
+  "name": "whispr",
+  "version": "1.0.0",
+  "description": "Anonymous messaging app",
+  "private": true,
+  "dependencies": {
+    "nodemailer": "^6.9.9"
+  }
+}

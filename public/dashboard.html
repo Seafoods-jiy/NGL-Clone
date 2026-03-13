@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ngl — inbox</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="page-dashboard">
+
+  <!-- ── MODAL (Image 4 style) ── -->
+  <div id="modal" class="modal-bg hidden" onclick="handleModalBgClick(event)">
+    <div class="modal-sheet">
+      <!-- Share row: warning, IG (active), snap, whatsapp, X -->
+      <div class="modal-share-row">
+        <button class="modal-share-icon">⚠️</button>
+        <button class="modal-share-icon ig-active">📷</button>
+        <button class="modal-share-icon">👻</button>
+        <button class="modal-share-icon">💬</button>
+        <button class="modal-share-close" onclick="closeModal()">✕</button>
+      </div>
+
+      <!-- NGL card -->
+      <div class="modal-ngl-card">
+        <div class="modal-ngl-top">
+          <div class="modal-ngl-top-label">send me anonymous messages!</div>
+        </div>
+        <div class="modal-ngl-body">
+          <p class="modal-msg-text" id="modalMsgText"></p>
+        </div>
+      </div>
+
+      <!-- Color / camera pickers -->
+      <div class="modal-picker-row">
+        <div class="picker-color"></div>
+        <button class="picker-camera">📷</button>
+      </div>
+
+      <!-- Who sent / Reply -->
+      <button class="modal-who-btn">Who sent this 👀 👀</button>
+      <button class="modal-reply-btn">
+        <span>📷</span> reply
+      </button>
+    </div>
+  </div>
+
+  <!-- ── DASHBOARD ── -->
+  <div class="dash-wrap">
+    <!-- Sticky header -->
+    <div class="dash-header">
+      <div class="dash-eye-wrap">
+        <button class="dash-eye-btn">👁</button>
+        <div class="dash-eye-dot"></div>
+      </div>
+
+      <div class="dash-tabs-row">
+        <button class="dash-tab" id="tabPlay" onclick="setTab('play')">PLAY</button>
+        <button class="dash-tab active" id="tabInbox" onclick="setTab('inbox')">INBOX</button>
+      </div>
+
+      <button class="dash-gear-btn" onclick="loadMessages()" title="Refresh">⚙️</button>
+    </div>
+
+    <!-- Inbox list -->
+    <div class="dash-list-wrap" id="inboxView">
+      <div id="msgList" class="dash-empty">Loading…</div>
+    </div>
+
+    <!-- Play tab -->
+    <div class="dash-list-wrap hidden" id="playView">
+      <div class="dash-empty">🎮 Coming soon</div>
+    </div>
+  </div>
+
+  <!-- Fixed red button -->
+  <button class="who-sent-btn">Who sent these? 👀</button>
+
+  <script>
+    let messages = [];
+
+    // Heart-envelope SVG
+    const envelopeSVG = `<svg viewBox="0 0 36 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="1" y="1" width="34" height="26" rx="5" fill="#f5ddf2" stroke="#d8a8d0" stroke-width="1.5"/>
+      <path d="M2 5 L18 17 L34 5" stroke="#d8a8d0" stroke-width="1.5" fill="none"/>
+      <path d="M18 14 C18 14 12 9 12 6.5 C12 4.3 14.8 2.8 18 5.5 C21.2 2.8 24 4.3 24 6.5 C24 9 18 14 18 14Z" fill="#e8508a"/>
+    </svg>`;
+
+    function setTab(tab) {
+      document.getElementById('inboxView').classList.toggle('hidden', tab !== 'inbox');
+      document.getElementById('playView').classList.toggle('hidden', tab !== 'play');
+      document.getElementById('tabInbox').classList.toggle('active', tab === 'inbox');
+      document.getElementById('tabPlay').classList.toggle('active', tab === 'play');
+    }
+
+    function relativeTime(ts) {
+      const diff = Date.now() - new Date(ts).getTime();
+      const s = Math.floor(diff / 1000);
+      if (s < 10) return 'a few seconds ago';
+      if (s < 60) return `${s} seconds ago`;
+      const m = Math.floor(s / 60);
+      if (m < 60) return `${m} minute${m > 1 ? 's' : ''} ago`;
+      const h = Math.floor(m / 60);
+      if (h < 24) return `${h} hour${h > 1 ? 's' : ''} ago`;
+      return new Date(ts).toLocaleDateString();
+    }
+
+    function openModal(idx) {
+      const msg = messages[idx];
+      document.getElementById('modalMsgText').textContent = msg.message;
+      document.getElementById('modal').classList.remove('hidden');
+    }
+
+    function closeModal() {
+      document.getElementById('modal').classList.add('hidden');
+    }
+
+    function handleModalBgClick(e) {
+      if (e.target === document.getElementById('modal')) closeModal();
+    }
+
+    function escapeHtml(s) {
+      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    async function loadMessages() {
+      const list = document.getElementById('msgList');
+      list.className = 'dash-empty';
+      list.innerHTML = 'Loading…';
+
+      try {
+        const res = await fetch('/api/getMessages');
+        messages = await res.json();
+
+        if (!messages.length) {
+          list.innerHTML = '👀 No messages yet';
+          return;
+        }
+
+        list.className = 'msg-list';
+        list.innerHTML = messages.map((m, i) => `
+          <div class="msg-row" onclick="openModal(${i})">
+            <div class="msg-env-icon">${envelopeSVG}</div>
+            <div class="msg-row-content">
+              <div class="msg-row-text">${escapeHtml(m.message.substring(0, 55))}${m.message.length > 55 ? '…' : ''}</div>
+              <div class="msg-row-time">${relativeTime(m.timestamp)}</div>
+            </div>
+            <div class="msg-row-chevron">›</div>
+          </div>
+        `).join('');
+      } catch {
+        list.innerHTML = '⚠️ Could not load messages';
+      }
+    }
+
+    loadMessages();
+  </script>
+</body>
+</html>

@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ngl</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+</head>
+<body class="page-send" id="sendPage">
+
+  <!-- Top bar -->
+  <div class="send-top">
+  </div>
+
+  <!-- White NGL card -->
+  <div class="ngl-send-card" id="sendCard">
+    <div class="ngl-send-card-header">
+      <div class="ngl-avatar">
+        <img src="assets\avatar.jpg" alt="not supported">
+      </div>
+      <div class="ngl-header-text">
+        <div class="ngl-username" id="headerUsername">@jxwv.yzq</div>
+        <div class="ngl-subtext">send me anonymous messages!</div>
+      </div>
+    </div>
+    <div class="ngl-send-card-body">
+      <textarea
+        id="messageInput"
+        class="ngl-textarea"
+        placeholder="send a message..."
+        maxlength="500"
+        rows="4"
+      ></textarea>
+    </div>
+    <div class="ngl-send-card-footer">
+      <div class="ngl-lock-label">
+        <span>🔒</span> anonymous q&a
+      </div>
+      <button class="ngl-dice" id="diceBtn" title="Random prompt">🎲</button>
+    </div>
+  </div>
+
+  <!-- Send button -->
+  <button class="send-action-btn" id="sendBtn" onclick="sendMessage()">Send!</button>
+
+  <!-- Friend count -->
+  <div class="send-friends-text" id="friendsText">
+    <span class="hand">👇</span> <span id="friendCount">244</span> friends just tapped the button <span class="hand">👇</span>
+  </div>
+
+  <script>
+    const countEl = document.getElementById('friendCount');
+    let count = parseInt(countEl.textContent);
+
+    setInterval(() => {
+      count += 1;
+      countEl.textContent = count;
+    }, 1000); // every 1000ms = 1 second
+  </script>
+
+  <!-- Get your own button -->
+  <button class="send-own-btn animate__animated animate__shakeX " onclick="window.location.href='https://ngl.link/'">Get your own messages!</button>
+
+  <div class="send-footer-links">
+    <a href="#">Terms</a>
+    <a href="#">Privacy</a>
+  </div>
+
+  <!-- ── SENT SCREEN (replaces everything) ── -->
+  <div class="sent-screen hidden" id="sentScreen">
+    <div class="sent-check-circle">
+      <svg viewBox="0 0 44 44">
+        <polyline points="8,22 18,32 36,12" />
+      </svg>
+    </div>
+    <div class="sent-title">Sent!</div>
+    <div class="sent-friends-count">👇 255 friends just tapped the button 👇</div>
+    <button class="sent-get-btn">Get your own messages!</button>
+    <button class="sent-another-link" onclick="resetForm()">Send another message</button>
+  </div>
+
+  <script>
+    const username = sessionStorage.getItem('sender_username') || 'user';
+    document.getElementById('topUsername').textContent = username;
+    document.getElementById('headerUsername').textContent = '@' + username;
+
+    const randomPrompts = [
+      'what do you really think of me?',
+      'give me a song recommendation',
+      'what\'s one thing you\'ve never told me?',
+      'describe me in 3 words',
+      'what\'s your honest opinion of me?',
+      'ask me anything...',
+      'what do we have in common?',
+    ];
+    document.getElementById('diceBtn').addEventListener('click', () => {
+      const p = randomPrompts[Math.floor(Math.random() * randomPrompts.length)];
+      document.getElementById('messageInput').value = p;
+    });
+
+    async function sendMessage() {
+      const message = document.getElementById('messageInput').value.trim();
+      if (!message) {
+        document.getElementById('messageInput').classList.add('shake');
+        setTimeout(() => document.getElementById('messageInput').classList.remove('shake'), 400);
+        return;
+      }
+
+      const btn = document.getElementById('sendBtn');
+      btn.textContent = 'Sending…';
+      btn.disabled = true;
+
+      try {
+        const res = await fetch('/api/sendMessage', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, message }),
+        });
+
+        if (res.ok) {
+          // Show sent screen, hide send UI
+          document.getElementById('sendCard').classList.add('hidden');
+          document.getElementById('sendBtn').classList.add('hidden');
+          document.getElementById('friendsText').classList.add('hidden');
+          document.querySelector('.send-own-btn').classList.add('hidden');
+          document.querySelector('.send-footer-links').classList.add('hidden');
+          document.querySelector('.send-top').classList.add('hidden');
+          document.getElementById('sentScreen').classList.remove('hidden');
+        } else {
+          btn.textContent = 'Try again';
+          btn.disabled = false;
+        }
+      } catch (e) {
+        btn.textContent = 'Try again';
+        btn.disabled = false;
+      }
+    }
+
+    function resetForm() {
+      document.getElementById('messageInput').value = '';
+      document.getElementById('sendCard').classList.remove('hidden');
+      document.getElementById('sendBtn').classList.remove('hidden');
+      document.getElementById('sendBtn').textContent = 'Send!';
+      document.getElementById('sendBtn').disabled = false;
+      document.getElementById('friendsText').classList.remove('hidden');
+      document.querySelector('.send-own-btn').classList.remove('hidden');
+      document.querySelector('.send-footer-links').classList.remove('hidden');
+      document.querySelector('.send-top').classList.remove('hidden');
+      document.getElementById('sentScreen').classList.add('hidden');
+    }
+  </script>
+</body>
+</html>
