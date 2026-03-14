@@ -298,6 +298,7 @@ body.page-send {
   padding: 40px 20px;
   background: var(--ngl-grad);
   text-align: center;
+  width: 100%;
 }
 .sent-check-circle {
   width: 86px;
