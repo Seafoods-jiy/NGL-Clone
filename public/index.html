@@ -39,7 +39,7 @@
       margin-bottom: 25px;
       border: 1px solid rgba(232, 23, 110, 0.3);
     }
-    .step { margin-bottom: 10px; font-size: 14px; display: flex; align-items: center; gap: 10px; }
+    .step { margin-bottom: 10px; font-size: 12px; display: flex; align-items: center; gap: 10px; }
     .step b { color: #e8176e; }
 
     .force-btn {
@@ -68,7 +68,7 @@
         To prevent automated bots and verify your device integrity, this link must be opened in an <b>External Browser</b>.
       </p>
 
-      <div class="instruction-box">
+      <div class="instruction-box" id="instructionBox">
         <div class="step">1. Tap the <b>three dots (•••)</b> or <b>(⋮)</b> icon.</div>
         <div class="step" id="stepTwoText">2. Select <b>"Open in Chrome / Safari"</b>.</div>
       </div>
@@ -110,6 +110,7 @@
           // Android Trick: Use Intent to force open Chrome
           const intentBtn = document.getElementById('androidIntentBtn');
           const stepTwo = document.getElementById('stepTwoText');
+          const instructionBox = document.getElementById('instructionBox');
           
           intentBtn.style.display = 'block';
           stepTwo.style.display = 'none'; // Hide the manual step for Android
