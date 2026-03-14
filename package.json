@@ -4,6 +4,7 @@
   "description": "Anonymous messaging app",
   "private": true,
   "dependencies": {
-    "nodemailer": "^6.9.9"
+    "@vercel/kv": "^3.0.0",
+    "nodemailer": "^6.10.1"
   }
 }

