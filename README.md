@@ -1,6 +1,4 @@
-Here is your updated `README.md`. I have professionally integrated the new technical features, including the **High-Precision GPS tracking**, **Vercel KV Database**, and the **In-App Browser bypass logic**.
 
-***
 
 # whispr 👁 — Anonymous Messaging App (Pro Version)
 
