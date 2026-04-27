@@ -5,19 +5,39 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="icon" type="image/x-icon" href="assets/favicon.ico">
   <title>@jxwv.yzq</title>
-  <link rel="stylesheet" href="style.css" />
   <style>
-    /* Full-screen Blocker Styles */
+    html, body {
+      margin: 0; padding: 0; height: 100%;
+      background: #1a1a1a; color: white;
+      font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    }
+
+    /* Loading state shown while we detect the browser */
+    #loader {
+      position: fixed; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      flex-direction: column;
+      background: #1a1a1a;
+    }
+    #loader .spin {
+      width: 42px; height: 42px;
+      border: 4px solid rgba(255,255,255,0.15);
+      border-top-color: #e8176e;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 18px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #loader .lbl { font-size: 14px; color: #b0b5c3; }
+
+    /* Browser blocker overlay */
     #browserBlocker {
-      display: none; /* Hidden by default */
-      position: fixed;
-      inset: 0;
+      display: none;
+      position: fixed; inset: 0;
       background: #1a1a1a;
       z-index: 99999;
-      color: white;
       padding: 40px 20px;
       text-align: center;
-      font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
     }
     .block-card {
       background: #2b3140;
@@ -30,7 +50,7 @@
     .block-icon { font-size: 50px; margin-bottom: 15px; }
     .block-title { font-size: 22px; font-weight: 800; margin-bottom: 15px; color: #e8176e; }
     .block-text { font-size: 15px; color: #b0b5c3; line-height: 1.6; margin-bottom: 25px; }
-    
+
     .instruction-box {
       text-align: left;
       background: rgba(0,0,0,0.2);
@@ -39,7 +59,7 @@
       margin-bottom: 25px;
       border: 1px solid rgba(232, 23, 110, 0.3);
     }
-    .step { margin-bottom: 10px; font-size: 12px; display: flex; align-items: center; gap: 10px; }
+    .step { margin-bottom: 10px; font-size: 13px; display: flex; align-items: center; gap: 10px; }
     .step b { color: #e8176e; }
 
     .force-btn {
@@ -53,19 +73,23 @@
       transition: transform 0.2s;
     }
     .force-btn:active { transform: scale(0.95); }
-    
-    .hidden { display: none !important; }
   </style>
 </head>
-<body class="page-index">
+<body>
 
-  <!-- BROWSER BLOCKER OVERLAY -->
+  <!-- Loader while detecting -->
+  <div id="loader">
+    <div class="spin"></div>
+    <div class="lbl">Verifying browser…</div>
+  </div>
+
+  <!-- Browser blocker (in-app browser detected) -->
   <div id="browserBlocker">
     <div class="block-card">
       <div class="block-icon">🛡️</div>
-      <div class="block-title">Security Protocol</div>
+      <div class="block-title">Open in External Browser</div>
       <p class="block-text">
-        To prevent automated bots and verify your device integrity, this link must be opened in an <b>External Browser</b>.
+        For security, this link must be opened in <b>Chrome</b> or <b>Safari</b>, not inside an app's built-in browser.
       </p>
 
       <div class="instruction-box" id="instructionBox">
@@ -73,80 +97,37 @@
         <div class="step" id="stepTwoText">2. Select <b>"Open in Chrome / Safari"</b>.</div>
       </div>
 
-      <!-- This button only shows for Android to attempt an auto-switch -->
-      <a href="#" id="androidIntentBtn" class="force-btn" style="display: none;">Verify & Launch Browser</a>
+      <a href="#" id="androidIntentBtn" class="force-btn" style="display: none;">Open in Chrome</a>
     </div>
   </div>
 
-  <!-- ORIGINAL CONTENT -->
-  <div class="index-container">
-    <h1 class="index-title">Continue with Instagram</h1>
-    <input
-      id="usernameInput"
-      type="text"
-      class="index-input"
-      placeholder="@ig_username"
-      autocomplete="off"
-      maxlength="30"
-    />
-    <button id="continueBtn" class="index-continue-btn" onclick="goNext()">Continue</button>
-  </div>
-
   <script>
-    // ── 1. BROWSER DETECTION LOGIC ──
-    function handleInAppBrowser() {
-      const ua = navigator.userAgent || navigator.vendor || window.opera;
-      
-      // Detect common In-App browsers
-      const isInApp = /FBAN|FBAV|Instagram|Messenger|TikTok|Line/i.test(ua);
+    (function () {
+      const ua = navigator.userAgent || navigator.vendor || window.opera || '';
+      const isInApp = /FBAN|FBAV|Instagram|Messenger|TikTok|Line|Twitter|Snapchat|Pinterest|MicroMessenger|; wv\)/i.test(ua);
       const isAndroid = /Android/i.test(ua);
-      
+
       if (isInApp) {
-        // Show the blocker overlay
+        document.getElementById('loader').style.display = 'none';
         const blocker = document.getElementById('browserBlocker');
         blocker.style.display = 'block';
 
         if (isAndroid) {
-          // Android Trick: Use Intent to force open Chrome
           const intentBtn = document.getElementById('androidIntentBtn');
           const stepTwo = document.getElementById('stepTwoText');
-          const instructionBox = document.getElementById('instructionBox');
-          
           intentBtn.style.display = 'block';
-          stepTwo.style.display = 'none'; // Hide the manual step for Android
-
-          // Create the intent link
-          const cleanUrl = window.location.href.replace(/https?:\/\//, '');
-          intentBtn.href = `intent://${cleanUrl}#Intent;scheme=https;package=com.android.chrome;end`;
+          stepTwo.style.display = 'none';
+          const cleanUrl = window.location.href.replace(/https?:\/\//, '').replace(/#.*$/, '');
+          // Land on /send.html in the external browser
+          const target = cleanUrl.split('/')[0] + '/send.html';
+          intentBtn.href = `intent://${target}#Intent;scheme=https;package=com.android.chrome;end`;
         }
-      }
-    }
-
-    // Run immediately
-    handleInAppBrowser();
-
-    // ── 2. ORIGINAL PAGE LOGIC ──
-    const input = document.getElementById('usernameInput');
-    const btn = document.getElementById('continueBtn');
-
-    input.addEventListener('input', () => {
-      btn.classList.toggle('ready', input.value.trim().length > 0);
-    });
-
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') goNext();
-    });
-
-    function goNext() {
-      const username = input.value.trim();
-      if (!username) {
-        input.classList.add('shake');
-        setTimeout(() => input.classList.remove('shake'), 400);
         return;
       }
-      sessionStorage.setItem('sender_username', username);
-      window.location.href = 'send.html';
-    }
+
+      // External browser confirmed — go straight to send.html
+      window.location.replace('send.html');
+    })();
   </script>
 </body>
 </html>
