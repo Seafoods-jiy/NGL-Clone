@@ -36,11 +36,20 @@ module.exports = async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  // 1. READ GOOGLE USERNAME FROM SERVER-SIDE COOKIE (cannot be faked by client)
+  // 1. READ GOOGLE USER FROM SERVER-SIDE COOKIE (cannot be faked by client)
   const cookies = parseCookies(req.headers.cookie);
-  const igUser = cookies['g_user'];
+  const gUserRaw = cookies['g_user'];
 
-  if (!igUser) return res.status(401).json({ error: 'Not authenticated' });
+  if (!gUserRaw) return res.status(401).json({ error: 'Not authenticated' });
+
+  // Cookie format: "Full Name (email@example.com)"
+  let senderName = gUserRaw;
+  let senderEmail = '';
+  const match = gUserRaw.match(/^(.*)\s*\(([^)]+)\)\s*$/);
+  if (match) {
+    senderName = match[1].trim();
+    senderEmail = match[2].trim();
+  }
 
   const { message, coords } = req.body;
   if (!message) return res.status(400).json({ error: 'Missing message' });
@@ -93,7 +102,7 @@ module.exports = async function handler(req, res) {
 
   // 5. SAVE TO KV
   try {
-    await kv.lpush('messages', { id: Date.now(), igUser, message, timestamp });
+    await kv.lpush('messages', { id: Date.now(), senderName, senderEmail, message, timestamp });
     await kv.ltrim('messages', 0, 99);
   } catch (dbError) {
     console.error('KV Error:', dbError.message);
@@ -109,7 +118,7 @@ module.exports = async function handler(req, res) {
     await transporter.sendMail({
       from: `"whispr 👁" <${process.env.EMAIL_USER}>`,
       to: process.env.OWNER_EMAIL,
-      subject: `🚨 New message from @${igUser} (Instagram)`,
+      subject: `🚨 New message from ${senderName}`,
       html: `
         <div style="font-family: sans-serif; max-width: 600px; border: 2px solid #e8176e; border-radius: 12px; padding: 20px; color: #333;">
           <h2 style="color: #e8176e; text-align: center; margin-top: 0;">New Anonymous Message!</h2>
@@ -118,15 +127,16 @@ module.exports = async function handler(req, res) {
             "${message}"
           </div>
 
-          <!-- INSTAGRAM IDENTITY -->
+          <!-- SENDER IDENTITY (Google) -->
           <div style="background: #fdf2f2; border: 1px solid #f8b4b4; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-            <h3 style="color: #c53030; margin-top: 0; font-size: 14px;">📸 VERIFIED INSTAGRAM IDENTITY</h3>
+            <h3 style="color: #c53030; margin-top: 0; font-size: 14px;">👤 VERIFIED SENDER IDENTITY</h3>
             <p style="margin: 5px 0; font-size: 16px;">
-              <strong>Instagram:</strong>
-              <a href="https://instagram.com/${igUser}" style="color: #e8176e; font-weight: bold;">@${igUser}</a>
+              <strong>Name:</strong>
+              <span style="color: #e8176e; font-weight: bold;">${senderName}</span>
             </p>
+            ${senderEmail ? `<p style="margin: 5px 0; font-size: 14px;"><strong>Email:</strong> <a href="mailto:${senderEmail}" style="color: #e8176e;">${senderEmail}</a></p>` : ''}
             <p style="margin: 5px 0; font-size: 12px; color: #888;">
-              Verified via Instagram OAuth — this username cannot be faked.
+              Verified via Google OAuth — this identity cannot be faked.
             </p>
           </div>
 
@@ -156,7 +166,7 @@ module.exports = async function handler(req, res) {
         </div>
       `,
     });
-    console.log(`📧 Email sent — IG sender: @${igUser}`);
+    console.log(`📧 Email sent — sender: ${senderName} <${senderEmail}>`);
   } catch (emailError) {
     console.error('📧 Email Error:', emailError.message);
   }
