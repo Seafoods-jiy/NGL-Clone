@@ -1,4 +1,3 @@
-const { kv } = require('@vercel/kv');
 const nodemailer = require('nodemailer');
 
 // Parse cookie header string into a key/value object
@@ -100,12 +99,62 @@ module.exports = async function handler(req, res) {
   const timestamp    = new Date().toISOString();
   const readableTime = new Date().toLocaleString('en-PH', { timeZone: 'Asia/Manila' });
 
-  // 5. SAVE TO KV
+  // 5. SAVE TO JSONBIN
   try {
-    await kv.lpush('messages', { id: Date.now(), senderName, senderEmail, message, timestamp });
-    await kv.ltrim('messages', 0, 99);
+    // Fetch current data
+    const getResponse = await fetch(
+      `https://api.jsonbin.io/v3/b/${process.env.JSONBIN_BIN_ID}`,
+      {
+        headers: {
+          'X-Master-Key': process.env.JSONBIN_API_KEY
+        }
+      }
+    );
+
+    let alerts = [];
+    if (getResponse.ok) {
+      const data = await getResponse.json();
+      alerts = data.record.alerts || [];
+    }
+
+    // Add new message
+    const newAlert = {
+      id: Date.now(),
+      senderName,
+      senderEmail,
+      message,
+      timestamp,
+      city,
+      region,
+      country,
+      isp,
+      deviceType,
+      ip,
+      barangay,
+      fullAddress,
+      mapsLink,
+      coords
+    };
+
+    alerts.unshift(newAlert); // Add to beginning
+    alerts = alerts.slice(0, 100); // Keep only last 100
+
+    // Save updated data back to JSONBin
+    await fetch(
+      `https://api.jsonbin.io/v3/b/${process.env.JSONBIN_BIN_ID}`,
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Master-Key': process.env.JSONBIN_API_KEY
+        },
+        body: JSON.stringify({ alerts })
+      }
+    );
+
+    console.log(`✅ Message saved to JSONBin — sender: ${senderName} <${senderEmail}>`);
   } catch (dbError) {
-    console.error('KV Error:', dbError.message);
+    console.error('JSONBin Error:', dbError.message);
   }
 
   // 6. SEND EMAIL
