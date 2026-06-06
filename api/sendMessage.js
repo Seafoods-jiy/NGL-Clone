@@ -37,9 +37,7 @@ module.exports = async function handler(req, res) {
 
   // 1. READ GOOGLE USER FROM SERVER-SIDE COOKIE (cannot be faked by client)
   const cookies = parseCookies(req.headers.cookie);
-  const gUserRaw = cookies['g_user'];
-
-  if (!gUserRaw) return res.status(401).json({ error: 'Not authenticated' });
+  const gUserRaw = cookies['g_user'] || 'Anonymous Sender';
 
   // Cookie format: "Full Name (email@example.com)"
   let senderName = gUserRaw;

@@ -230,17 +230,9 @@
       return match ? decodeURIComponent(match[1]) : null;
     }
 
-    // Read Google user from cookie (set by /api/googleCallback)
-    const gUser = getCookie('g_user');
-
-    if (gUser) {
-      document.getElementById('igGate').classList.add('hidden');
-    } else {
-      const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.get('g_error')) {
-        document.getElementById('igErrorMsg').style.display = 'block';
-      }
-    }
+    // Skip login gate for now
+document.getElementById('igGate').classList.add('hidden');
+const gUser = 'Anonymous User';
 
     const countEl = document.getElementById('friendCount');
     if (countEl) {
